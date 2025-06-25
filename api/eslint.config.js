@@ -1,10 +1,11 @@
-const { FlatCompat } = require('@eslint/eslintrc')
-const parser = require('@typescript-eslint/parser')
-const tsPlugin = require('@typescript-eslint/eslint-plugin')
-const prettierPlugin = require('eslint-plugin-prettier')
-const compat = new FlatCompat({ baseDirectory: __dirname })
-
+// eslint.config.js
 module.exports = [
+    // 1) Bu blok tüm .d.ts’leri lint’ten hariç tutar
+    {
+        ignores: ['src/@types/**/*.d.ts']
+    },
+
+    // 2) Mevcut kurallarınız
     ...compat.extends(
         'plugin:@typescript-eslint/recommended',
         'plugin:prettier/recommended'
