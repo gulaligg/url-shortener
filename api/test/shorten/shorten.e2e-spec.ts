@@ -34,7 +34,7 @@ describe('ShortenController (e2e)', () => {
   })
 
   it('full scenario: create → click → info → analytics → delete → 404', async () => {
-    const payload = { originalUrl: 'https://gulaligulaliyev', alias: 'myalias123' }
+    const payload = { originalUrl: 'https://gulaligulaliyev.com', alias: 'myalias123' }
     const resCreate = await request(app.getHttpServer())
       .post('/shorten')
       .send(payload)
