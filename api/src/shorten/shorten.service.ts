@@ -32,22 +32,17 @@ export class ShortenService {
         return exists ? this.generateAlias() : code
     }
 
-    /** Yeni link yaratma */
     async create(dto: CreateLinkDto) {
         const { originalUrl, expiresAt, alias } = dto
         const cacheKey = `alias:${originalUrl}`
 
-        // Eğer kullanıcı özel alias vermişse ve zaten varsa hata fırlat
         if (alias) {
             const conflict = await this.prisma.link.findUnique({
                 where: { shortCode: alias },
             })
-            if (conflict) {
-                throw new BadRequestException('Alias already in use')
-            }
+            if (conflict) throw new BadRequestException('Alias already in use')
         }
 
-        // Alias yoksa cache’den al veya yeni üret
         let shortCode = alias
         if (!shortCode) {
             const cached = await this.cacheManager.get<string>(cacheKey)
@@ -55,7 +50,6 @@ export class ShortenService {
                 shortCode = cached
             } else {
                 shortCode = await this.generateAlias()
-                // **Üçüncü parametre artık direkt TTL (saniye)**
                 await this.cacheManager.set(cacheKey, shortCode, 300)
             }
         }
@@ -71,7 +65,6 @@ export class ShortenService {
         return { shortUrl: `${process.env.APP_URL}/${link.shortCode}` }
     }
 
-    /** Kısa koda tıklayınca redirect ve sayaç artışı */
     async redirect(shortCode: string, ip: string) {
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
@@ -93,7 +86,6 @@ export class ShortenService {
         return link.originalUrl
     }
 
-    /** Info isteğinde önce DB’den bak, sonra cache’e set et */
     async getInfo(shortCode: string) {
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
@@ -103,12 +95,10 @@ export class ShortenService {
             throw new NotFoundException('Link not found')
         }
 
-        // **Cache’e yazarken de direkt TTL**
         await this.cacheManager.set(`info:${shortCode}`, link, 60)
         return link
     }
 
-    /** Link ve click kayıtlarını sil, cache temizle */
     async delete(shortCode: string) {
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
@@ -121,7 +111,7 @@ export class ShortenService {
         await this.prisma.click.deleteMany({ where: { linkId: link.id } })
         await this.prisma.link.delete({ where: { shortCode } })
 
-        // Cache anahtarlarını mutlaka sil
+        // Cache’i temizle
         await Promise.all([
             this.cacheManager.del(`info:${shortCode}`),
             this.cacheManager.del(`analytics:${shortCode}`),
@@ -130,7 +120,7 @@ export class ShortenService {
         return { deleted: true }
     }
 
-    /** Analytics isteğinde önce DB’den bak, sonra cache’e set et */
+    /** Burada da cache’den *okuma* yok, hep DB kontrolü var */
     async analytics(shortCode: string) {
         const link = await this.prisma.link.findUnique({
             where: { shortCode },

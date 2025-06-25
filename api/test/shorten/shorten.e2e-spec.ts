@@ -74,7 +74,6 @@ describe('ShortenController (e2e)', () => {
   })
 
   it('/analytics/:shortCode (GET) should return analytics data', async () => {
-    // birkaç kez daha tıklayalım
     await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
     await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
 

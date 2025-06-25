@@ -34,13 +34,11 @@ export class ShortenController {
         return this.service.analytics(code)
     }
 
-    // Testiniz bu rotayı /links/:shortCode DELETE olarak çağırıyor
     @Delete('links/:shortCode')
     async remove(@Param('shortCode') code: string) {
         return this.service.delete(code)
     }
 
-    // En alta dinamik redirect route’u
     @Get(':shortCode')
     async redirect(
         @Param('shortCode') code: string,
