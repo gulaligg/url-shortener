@@ -110,7 +110,7 @@ export class ShortenService {
 
         await this.prisma.$transaction([
             this.prisma.click.deleteMany({ where: { linkId: link.id } }),
-            this.prisma.link.delete({ where: { id: link.id } }),
+            this.prisma.link.delete({ where: { shortCode } }),
         ])
 
         await Promise.all([
