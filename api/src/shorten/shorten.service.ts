@@ -13,15 +13,12 @@ import { CreateLinkDto } from './dto/create-link.dto';
 
 @Injectable()
 export class ShortenService {
-    /** R.I.P */
-    private static readonly TOMBSTONE = 'DELETED' as const;
-
     constructor(
         private readonly prisma: PrismaService,
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
     ) { }
 
-    /* ------------------------- helpers ------------------------- */
+    /* ------------------------------------------------ helpers */
     private async generateAlias(): Promise<string> {
         const alphabet =
             '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
@@ -36,32 +33,25 @@ export class ShortenService {
         return exists ? this.generateAlias() : code;
     }
 
-    private async stillExists(shortCode: string): Promise<boolean> {
-        return !!(await this.prisma.link.findUnique({
-            where: { shortCode },
-            select: { id: true },
-        }));
-    }
-
-    /* ----------------------------- CREATE -------------------------- */
+    /* ------------------------------------------------ CREATE */
     async create(dto: CreateLinkDto) {
         const { originalUrl, expiresAt, alias } = dto;
-        const aliasCacheKey = `alias:${originalUrl}`;
+        const aliasKey = `alias:${originalUrl}`;
 
+        // özel takma ad çakışması?
         if (alias) {
-            const conflict = await this.prisma.link.findUnique({
+            const exists = await this.prisma.link.findUnique({
                 where: { shortCode: alias },
                 select: { id: true },
             });
-            if (conflict) throw new BadRequestException('Alias already in use');
+            if (exists) throw new BadRequestException('Alias already in use');
         }
 
         let shortCode = alias;
         if (!shortCode) {
             shortCode =
-                (await this.cache.get<string>(aliasCacheKey)) ??
-                (await this.generateAlias());
-            await this.cache.set(aliasCacheKey, shortCode, 300);
+                (await this.cache.get<string>(aliasKey)) ?? (await this.generateAlias());
+            await this.cache.set(aliasKey, shortCode, 300);
         }
 
         const link = await this.prisma.link.create({
@@ -75,7 +65,7 @@ export class ShortenService {
         return { shortUrl: `${process.env.APP_URL}/${link.shortCode}` };
     }
 
-    /* --------------------------- REDIRECT -------------------------- */
+    /* ------------------------------------------------ REDIRECT */
     async redirect(shortCode: string, ip: string) {
         const link = await this.prisma.link.findUnique({ where: { shortCode } });
         if (!link || (link.expiresAt && link.expiresAt < new Date()))
@@ -86,37 +76,29 @@ export class ShortenService {
                 where: { shortCode },
                 data: { clickCount: { increment: 1 } },
             }),
-            this.prisma.click.create({
-                data: { linkId: link.id, ipAddress: ip },
-            }),
+            this.prisma.click.create({ data: { linkId: link.id, ipAddress: ip } }),
         ]);
 
         return link.originalUrl;
     }
 
-    /* ------------------------------ INFO --------------------------- */
+    /* ------------------------------------------------ INFO */
     async getInfo(shortCode: string) {
         const cacheKey = `info:${shortCode}`;
         const cached = await this.cache.get(cacheKey);
-
-        if (cached === ShortenService.TOMBSTONE) throw new NotFoundException();
-        if (cached) {
-            if (await this.stillExists(shortCode)) return cached;
-            await this.cache.del(cacheKey); // tutarsızdı
-            throw new NotFoundException();
-        }
+        if (cached) return cached; // varsa direkt dön
 
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
             select: { originalUrl: true, createdAt: true, clickCount: true },
         });
-        if (!link) throw new NotFoundException();
+        if (!link) throw new NotFoundException('Link not found');
 
         await this.cache.set(cacheKey, link, 60);
         return link;
     }
 
-    /* ----------------------------- DELETE -------------------------- */
+    /* ------------------------------------------------ DELETE */
     async delete(shortCode: string) {
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
@@ -129,32 +111,27 @@ export class ShortenService {
             await tx.link.delete({ where: { id: link.id } });
         });
 
+        // ➜ Cache’leri tamamen kaldır
         await Promise.all([
-            this.cache.set(`info:${shortCode}`, ShortenService.TOMBSTONE, 60),
-            this.cache.set(`analytics:${shortCode}`, ShortenService.TOMBSTONE, 60),
+            this.cache.del(`info:${shortCode}`),
+            this.cache.del(`analytics:${shortCode}`),
             this.cache.del(`alias:${link.originalUrl}`),
         ]);
 
         return { deleted: true };
     }
 
-    /* --------------------------- ANALYTICS ------------------------- */
+    /* ------------------------------------------------ ANALYTICS */
     async analytics(shortCode: string) {
         const cacheKey = `analytics:${shortCode}`;
         const cached = await this.cache.get(cacheKey);
-
-        if (cached === ShortenService.TOMBSTONE) throw new NotFoundException();
-        if (cached) {
-            if (await this.stillExists(shortCode)) return cached;
-            await this.cache.del(cacheKey);
-            throw new NotFoundException();
-        }
+        if (cached) return cached;
 
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
             select: { id: true, clickCount: true },
         });
-        if (!link) throw new NotFoundException();
+        if (!link) throw new NotFoundException('Link not found');
 
         const lastClicks = await this.prisma.click.findMany({
             where: { linkId: link.id },
@@ -171,5 +148,4 @@ export class ShortenService {
         await this.cache.set(cacheKey, result, 60);
         return result;
     }
-
 }

@@ -76,7 +76,7 @@ describe('ShortenController (e2e)', () => {
       .delete(`/delete/${createdShortCode}`)
       .expect(200, { deleted: true });
 
-    /* 5) artık 404 */
+    /* 5) 404 */
     await request(app.getHttpServer()).get(`/info/${createdShortCode}`).expect(404);
     await request(app.getHttpServer())
       .get(`/analytics/${createdShortCode}`)
