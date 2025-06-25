@@ -91,7 +91,9 @@ export class ShortenService {
             where: { shortCode },
             select: { originalUrl: true, createdAt: true, clickCount: true },
         })
+
         if (!link) {
+            await this.cacheManager.del(`info:${shortCode}`)
             throw new NotFoundException('Link not found')
         }
 
@@ -125,7 +127,9 @@ export class ShortenService {
             where: { shortCode },
             select: { clickCount: true },
         })
+
         if (!link) {
+            await this.cacheManager.del(`analytics:${shortCode}`)
             throw new NotFoundException('Link not found')
         }
 
@@ -138,7 +142,7 @@ export class ShortenService {
 
         const result = {
             clickCount: link.clickCount,
-            lastIps: lastClicks.map((c) => c.ipAddress.replace(/^::ffff:/, '')),
+            lastIps: lastClicks.map(c => c.ipAddress.replace(/^::ffff:/, '')),
         }
 
         await this.cacheManager.set(`analytics:${shortCode}`, result, 60)
