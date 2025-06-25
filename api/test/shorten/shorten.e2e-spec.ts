@@ -43,14 +43,14 @@ describe('ShortenController (e2e)', () => {
     expect(resCreate.body.shortUrl).toMatch(/\/myalias123$/)
     createdShortCode = 'myalias123'
 
-    await request(app.getHttpServer()).get(`/r/${createdShortCode}`).expect(302)
+    await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
 
     await request(app.getHttpServer())
       .get(`/info/${createdShortCode}`)
       .expect(200)
 
-    await request(app.getHttpServer()).get(`/r/${createdShortCode}`).expect(302)
-    await request(app.getHttpServer()).get(`/r/${createdShortCode}`).expect(302)
+    await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
+    await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
 
     await request(app.getHttpServer())
       .get(`/analytics/${createdShortCode}`)
@@ -58,7 +58,7 @@ describe('ShortenController (e2e)', () => {
       .expect(({ body }) => expect(body.clickCount).toBe(3))
 
     await request(app.getHttpServer())
-      .delete(`/links/${createdShortCode}`)
+      .delete(`/delete/${createdShortCode}`)
       .expect(200, { deleted: true })
 
     await request(app.getHttpServer()).get(`/info/${createdShortCode}`).expect(404)

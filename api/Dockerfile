@@ -1,15 +1,31 @@
-FROM node:22-alpine
-RUN apk add --no-cache libc6-compat python3 make g++
-WORKDIR /usr/src/app
+# ---------- api build aşaması ----------
+FROM node:22-alpine AS api-builder
+WORKDIR /usr/src/app/api
 
-COPY package*.json tsconfig*.json tsconfig.build.json nest-cli.json ./
+# 1) API kaynak kodunu kopyala
+COPY api/ ./
+
+# 2) Tüm bağımlılıkları (prod + dev) yükle
 RUN npm install
 
-COPY prisma ./prisma
+# 3) Derle
+RUN npm run build
 
-RUN npx prisma generate --no-engine
-RUN npm install @prisma/engine-core
+# 4) Prisma client üret
+RUN npx prisma generate --schema=prisma/schema.prisma
 
-COPY . .
+# ---------- prod image ----------
+FROM node:22-alpine
+WORKDIR /usr/src/app
+
+# Derlenmiş artefaktları al
+COPY --from=api-builder /usr/src/app/api/dist       ./dist
+COPY --from=api-builder /usr/src/app/api/node_modules ./node_modules
+COPY --from=api-builder /usr/src/app/api/prisma     ./prisma
+
+# İşte eksik klasör:
+COPY --from=api-builder /usr/src/app/api/generated   ./generated
+
+ENV PORT=3000
 EXPOSE 3000
-CMD ["npm", "run", "start:dev"]
+CMD ["node", "dist/main.js"]

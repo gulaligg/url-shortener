@@ -62,7 +62,7 @@ export class ShortenService {
             },
         })
 
-        return { shortUrl: `${process.env.APP_URL}/r/${link.shortCode}` }
+        return { shortUrl: `${process.env.APP_URL}/${link.shortCode}` }
     }
 
     async redirect(shortCode: string, ip: string) {
@@ -102,21 +102,27 @@ export class ShortenService {
     }
 
     async delete(shortCode: string) {
-        const deleted = await this.prisma.link.delete({
+        const link = await this.prisma.link.findUnique({
             where: { shortCode },
-            select: { originalUrl: true },
-        }).catch(() => null)
+            select: { id: true, originalUrl: true },
+        });
+        if (!link) throw new NotFoundException('Link not found');
 
-        if (!deleted) throw new NotFoundException('Link not found')
+        await this.prisma.$transaction(async (tx) => {
+            await tx.click.deleteMany({ where: { linkId: link.id } });
+            await tx.link.delete({ where: { id: link.id } });
+        });
 
         await Promise.all([
             this.cacheManager.del(`info:${shortCode}`),
             this.cacheManager.del(`analytics:${shortCode}`),
-            this.cacheManager.del(`alias:${deleted.originalUrl}`),
-        ])
+            this.cacheManager.del(`alias:${link.originalUrl}`),
+        ]);
 
-        return { deleted: true }
+        return { deleted: true };
     }
+
+
 
     async analytics(shortCode: string) {
         const link = await this.prisma.link.findUnique({

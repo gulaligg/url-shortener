@@ -1,0 +1,14 @@
+# node & paket artıkları
+**/node_modules
+**/dist
+**/.npm
+**/coverage
+**/*.log
+
+# VCS
+.git
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
