@@ -111,7 +111,6 @@ export class ShortenService {
         await this.prisma.click.deleteMany({ where: { linkId: link.id } })
         await this.prisma.link.delete({ where: { shortCode } })
 
-        // Cache’i temizle
         await Promise.all([
             this.cacheManager.del(`info:${shortCode}`),
             this.cacheManager.del(`analytics:${shortCode}`),
@@ -120,7 +119,6 @@ export class ShortenService {
         return { deleted: true }
     }
 
-    /** Burada da cache’den *okuma* yok, hep DB kontrolü var */
     async analytics(shortCode: string) {
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
