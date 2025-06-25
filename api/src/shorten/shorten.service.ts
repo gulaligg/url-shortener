@@ -118,6 +118,15 @@ export class ShortenService {
             this.cache.del(`alias:${link.originalUrl}`),
         ]);
 
+        const store: any = (this.cache as any).store;
+        if (store?.redis?.flushall) {
+            await store.redis.flushall();
+        } else if (typeof store?.flushall === 'function') {
+            await store.flushall();
+        } else if (typeof (this.cache as any).reset === 'function') {
+            await (this.cache as any).reset();
+        }
+
         return { deleted: true };
     }
 
