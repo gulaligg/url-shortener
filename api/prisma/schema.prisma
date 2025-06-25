@@ -20,8 +20,8 @@ model Link {
 
 model Click {
   id        String   @id @default(uuid())
-  link      Link     @relation(fields: [linkId], references: [id])
   linkId    String
   clickedAt DateTime @default(now())
   ipAddress String
+  link      Link     @relation(fields: [linkId], references: [id], onDelete: Cascade)
 }
