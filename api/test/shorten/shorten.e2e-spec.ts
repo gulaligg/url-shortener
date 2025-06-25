@@ -21,7 +21,6 @@ describe('ShortenController (e2e)', () => {
     await app.init()
 
     prisma = app.get(PrismaService)
-    // Temizlik
     await prisma.click.deleteMany()
     await prisma.link.deleteMany()
   })
@@ -42,7 +41,6 @@ describe('ShortenController (e2e)', () => {
     expect(body).toHaveProperty('shortUrl')
     expect(body.shortUrl).toMatch(/\/myalias123$/)
 
-    // Veritabanında da kayıt var mı?
     const link = await prisma.link.findUnique({
       where: { shortCode: 'myalias123' },
     })
@@ -53,7 +51,6 @@ describe('ShortenController (e2e)', () => {
   })
 
   it('/:shortCode (GET) should redirect and increment clickCount', async () => {
-    // Önce clickCount sıfır olmalı
     const before = await prisma.link.findUnique({
       where: { shortCode: createdShortCode },
     })
@@ -66,14 +63,12 @@ describe('ShortenController (e2e)', () => {
 
     expect(res.header.location).toBe('https://example.com')
 
-    // clickCount artmış olmalı
     const after = await prisma.link.findUnique({
       where: { shortCode: createdShortCode },
     })
     expect(after).not.toBeNull()
     expect(after!.clickCount).toBe(1)
 
-    // bir Click kaydı oluşmuş mu?
     const clicks = await prisma.click.findMany({ where: { linkId: after!.id } })
     expect(clicks.length).toBe(1)
     expect(clicks[0].ipAddress).toBeDefined() // IP adresi kaydı da olsun
@@ -92,7 +87,6 @@ describe('ShortenController (e2e)', () => {
   })
 
   it('/analytics/:shortCode (GET) should return analytics data', async () => {
-    // bir iki ek tıklama yapalım
     await request(app.getHttpServer() as any)
       .get(`/${createdShortCode}`)
       .expect(302)
@@ -105,20 +99,19 @@ describe('ShortenController (e2e)', () => {
       .expect(200)
 
     expect(res.body).toEqual({
-      clickCount: 3, // toplam tıklama
-      lastIps: expect.arrayContaining([expect.any(String)]), // en son 5 IP
+      clickCount: 3,
+      lastIps: expect.arrayContaining([expect.any(String)]),
     })
     expect(res.body.lastIps.length).toBeLessThanOrEqual(5)
   })
 
-  it('/delete/:shortCode (DELETE) should remove the link', async () => {
+  it('/links/:shortCode (DELETE) should remove the link', async () => {
     const res = await request(app.getHttpServer() as any)
-      .delete(`/delete/${createdShortCode}`)
+      .delete(`/links/${createdShortCode}`)
       .expect(200)
 
     expect(res.body).toEqual({ deleted: true })
 
-    // artık veritabanında yok
     const link = await prisma.link.findUnique({
       where: { shortCode: createdShortCode },
     })
