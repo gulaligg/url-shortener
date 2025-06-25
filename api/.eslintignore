@@ -1,0 +1,2 @@
+# .eslintignore
+api/src/@types/**/*.d.ts
