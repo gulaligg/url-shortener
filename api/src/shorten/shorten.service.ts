@@ -102,22 +102,22 @@ export class ShortenService {
     async delete(shortCode: string) {
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
-            select: { id: true },
+            select: { id: true, originalUrl: true },
         })
-        if (!link) {
-            throw new NotFoundException('Link not found')
-        }
+        if (!link) throw new NotFoundException('Link not found')
 
         await this.prisma.click.deleteMany({ where: { linkId: link.id } })
         await this.prisma.link.delete({ where: { shortCode } })
-        await Promise.all ([
+
+        await Promise.all([
             this.cacheManager.del(`info:${shortCode}`),
             this.cacheManager.del(`analytics:${shortCode}`),
-            this.cacheManager.del(`alia:${shortCode}`)
+            this.cacheManager.del(`alias:${link.originalUrl}`),
         ])
 
         return { deleted: true }
     }
+
 
     async analytics(shortCode: string) {
         const link = await this.prisma.link.findUnique({
