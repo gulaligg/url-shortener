@@ -3,13 +3,32 @@ import {
     BadRequestException,
     NotFoundException,
     Inject,
-} from '@nestjs/common';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
-import { randomBytes } from 'crypto';
+} from '@nestjs/common'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import type { Cache } from 'cache-manager'
+import { randomBytes } from 'crypto'
 
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateLinkDto } from './dto/create-link.dto';
+import { PrismaService } from '../prisma/prisma.service'
+import { CreateLinkDto } from './dto/create-link.dto'
+
+/* ---------- lint-safe helper types ------------------------- */
+interface Flushable {
+    flushall?: () => Promise<unknown>
+}
+
+interface StoreLike extends Flushable {
+    redis?: Flushable
+}
+
+interface CacheWithStore extends Cache {
+    store?: StoreLike
+}
+
+interface ResettableCache extends Cache {
+    reset?: () => Promise<void>
+    store?: StoreLike
+}
+/* ---------------------------------------------------------------- */
 
 @Injectable()
 export class ShortenService {
@@ -18,40 +37,39 @@ export class ShortenService {
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
     ) { }
 
-    /* ------------------------------------------------ helpers */
+    /* ---------------------------- helpers -------------------------- */
     private async generateAlias(): Promise<string> {
         const alphabet =
-            '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-        const bytes = randomBytes(8);
-        let code = '';
-        for (const b of bytes) code += alphabet[b % alphabet.length];
+            '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+        const bytes = randomBytes(8)
+        let code = ''
+        for (const b of bytes) code += alphabet[b % alphabet.length]
 
         const exists = await this.prisma.link.findUnique({
             where: { shortCode: code },
             select: { id: true },
-        });
-        return exists ? this.generateAlias() : code;
+        })
+        return exists ? this.generateAlias() : code
     }
 
-    /* ------------------------------------------------ CREATE */
+    /* ----------------------------- CREATE -------------------------- */
     async create(dto: CreateLinkDto) {
-        const { originalUrl, expiresAt, alias } = dto;
-        const aliasKey = `alias:${originalUrl}`;
+        const { originalUrl, expiresAt, alias } = dto
+        const aliasKey = `alias:${originalUrl}`
 
-        // özel takma ad çakışması?
         if (alias) {
-            const exists = await this.prisma.link.findUnique({
+            const conflict = await this.prisma.link.findUnique({
                 where: { shortCode: alias },
                 select: { id: true },
-            });
-            if (exists) throw new BadRequestException('Alias already in use');
+            })
+            if (conflict) throw new BadRequestException('Alias already in use')
         }
 
-        let shortCode = alias;
+        let shortCode = alias
         if (!shortCode) {
             shortCode =
-                (await this.cache.get<string>(aliasKey)) ?? (await this.generateAlias());
-            await this.cache.set(aliasKey, shortCode, 300);
+                (await this.cache.get<string>(aliasKey)) ?? (await this.generateAlias())
+            await this.cache.set(aliasKey, shortCode, 300)
         }
 
         const link = await this.prisma.link.create({
@@ -60,16 +78,16 @@ export class ShortenService {
                 originalUrl,
                 expiresAt: expiresAt ? new Date(expiresAt) : null,
             },
-        });
+        })
 
-        return { shortUrl: `${process.env.APP_URL}/${link.shortCode}` };
+        return { shortUrl: `${process.env.APP_URL}/${link.shortCode}` }
     }
 
-    /* ------------------------------------------------ REDIRECT */
+    /* ---------------------------- REDIRECT ------------------------- */
     async redirect(shortCode: string, ip: string) {
-        const link = await this.prisma.link.findUnique({ where: { shortCode } });
+        const link = await this.prisma.link.findUnique({ where: { shortCode } })
         if (!link || (link.expiresAt && link.expiresAt < new Date()))
-            throw new NotFoundException('Link not found or expired');
+            throw new NotFoundException('Link not found or expired')
 
         await this.prisma.$transaction([
             this.prisma.link.update({
@@ -77,84 +95,86 @@ export class ShortenService {
                 data: { clickCount: { increment: 1 } },
             }),
             this.prisma.click.create({ data: { linkId: link.id, ipAddress: ip } }),
-        ]);
+        ])
 
-        return link.originalUrl;
+        return link.originalUrl
     }
 
-    /* ------------------------------------------------ INFO */
+    /* ------------------------------ INFO --------------------------- */
     async getInfo(shortCode: string) {
-        const cacheKey = `info:${shortCode}`;
-        const cached = await this.cache.get(cacheKey);
-        if (cached) return cached; // varsa direkt dön
+        const cacheKey = `info:${shortCode}`
+        const cached = await this.cache.get(cacheKey)
+        if (cached) return cached
 
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
             select: { originalUrl: true, createdAt: true, clickCount: true },
-        });
-        if (!link) throw new NotFoundException('Link not found');
+        })
+        if (!link) throw new NotFoundException('Link not found')
 
-        await this.cache.set(cacheKey, link, 60);
-        return link;
+        await this.cache.set(cacheKey, link, 60)
+        return link
     }
 
-    /* ------------------------------------------------ DELETE */
+    /* ----------------------------- DELETE -------------------------- */
     async delete(shortCode: string) {
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
             select: { id: true, originalUrl: true },
-        });
-        if (!link) throw new NotFoundException('Link not found');
+        })
+        if (!link) throw new NotFoundException('Link not found')
 
         await this.prisma.$transaction(async (tx) => {
-            await tx.click.deleteMany({ where: { linkId: link.id } });
-            await tx.link.delete({ where: { id: link.id } });
-        });
+            await tx.click.deleteMany({ where: { linkId: link.id } })
+            await tx.link.delete({ where: { id: link.id } })
+        })
 
-        // ➜ Cache’leri tamamen kaldır
+        // Cache’i temizle
         await Promise.all([
             this.cache.del(`info:${shortCode}`),
             this.cache.del(`analytics:${shortCode}`),
             this.cache.del(`alias:${link.originalUrl}`),
-        ]);
+        ])
 
-        const store: any = (this.cache as any).store;
-        if (store?.redis?.flushall) {
-            await store.redis.flushall();
-        } else if (typeof store?.flushall === 'function') {
-            await store.flushall();
-        } else if (typeof (this.cache as any).reset === 'function') {
-            await (this.cache as any).reset();
+        /*  ---- flush/reset işlemleri (tip güvenli) ---- */
+        const cws = this.cache as CacheWithStore
+        if (cws.store?.redis?.flushall) {
+            await cws.store.redis.flushall()
+        } else if (cws.store?.flushall) {
+            await cws.store.flushall()
+        } else {
+            const resettable = this.cache as ResettableCache
+            if (resettable.reset) await resettable.reset()
         }
 
-        return { deleted: true };
+        return { deleted: true }
     }
 
-    /* ------------------------------------------------ ANALYTICS */
+    /* --------------------------- ANALYTICS ------------------------- */
     async analytics(shortCode: string) {
-        const cacheKey = `analytics:${shortCode}`;
-        const cached = await this.cache.get(cacheKey);
-        if (cached) return cached;
+        const cacheKey = `analytics:${shortCode}`
+        const cached = await this.cache.get(cacheKey)
+        if (cached) return cached
 
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
             select: { id: true, clickCount: true },
-        });
-        if (!link) throw new NotFoundException('Link not found');
+        })
+        if (!link) throw new NotFoundException('Link not found')
 
         const lastClicks = await this.prisma.click.findMany({
             where: { linkId: link.id },
             orderBy: { clickedAt: 'desc' },
             take: 5,
             select: { ipAddress: true },
-        });
+        })
 
         const result = {
             clickCount: link.clickCount,
             lastIps: lastClicks.map((c) => c.ipAddress.replace(/^::ffff:/, '')),
-        };
+        }
 
-        await this.cache.set(cacheKey, result, 60);
-        return result;
+        await this.cache.set(cacheKey, result, 60)
+        return result
     }
 }
