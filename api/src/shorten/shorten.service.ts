@@ -110,7 +110,11 @@ export class ShortenService {
 
         await this.prisma.click.deleteMany({ where: { linkId: link.id } })
         await this.prisma.link.delete({ where: { shortCode } })
-        await this.cacheManager.reset()
+        await Promise.all ([
+            this.cacheManager.del(`info:${shortCode}`),
+            this.cacheManager.del(`analytics:${shortCode}`),
+            this.cacheManager.del(`alia:${shortCode}`)
+        ])
 
         return { deleted: true }
     }
