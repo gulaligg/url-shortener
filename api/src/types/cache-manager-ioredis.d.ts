@@ -1,1 +1,1 @@
-declare module 'cache-manager-ioredis';
+declare module 'cache-manager-ioredis'

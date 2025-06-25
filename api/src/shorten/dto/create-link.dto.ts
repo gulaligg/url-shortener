@@ -1,16 +1,21 @@
-// src/shorten/dto/create-link.dto.ts
-import { IsUrl, IsOptional, IsString, MaxLength, IsDateString } from 'class-validator';
+import {
+  IsUrl,
+  IsOptional,
+  IsString,
+  MaxLength,
+  IsDateString,
+} from 'class-validator'
 
 export class CreateLinkDto {
-    @IsUrl()
-    originalUrl!: string;
+  @IsUrl()
+  originalUrl!: string
 
-    @IsOptional()
-    @IsDateString()
-    expiresAt?: string;
+  @IsOptional()
+  @IsDateString()
+  expiresAt?: string
 
-    @IsOptional()
-    @IsString()
-    @MaxLength(20)
-    alias?: string;
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  alias?: string
 }
