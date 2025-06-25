@@ -67,7 +67,7 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/url_shortener
           REDIS_URL: redis://localhost:6379
-        run: npm run test:e2e
+        run: npm run test:e2e -- --runInBand
 
   frontend:
     needs: backend
