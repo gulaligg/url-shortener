@@ -106,8 +106,10 @@ export class ShortenService {
         })
         if (!link) throw new NotFoundException('Link not found')
 
-        await this.prisma.click.deleteMany({ where: { linkId: link.id } })
-        await this.prisma.link.delete({ where: { shortCode } })
+        await this.prisma.$transaction([
+            this.prisma.click.deleteMany({ where: { linkId: link.id } }),
+            this.prisma.link.delete({ where: { id: link.id } }),
+        ])
 
         await Promise.all([
             this.cacheManager.del(`info:${shortCode}`),
@@ -117,7 +119,6 @@ export class ShortenService {
 
         return { deleted: true }
     }
-
 
     async analytics(shortCode: string) {
         const link = await this.prisma.link.findUnique({
