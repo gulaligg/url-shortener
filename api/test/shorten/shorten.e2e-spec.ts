@@ -49,7 +49,7 @@ describe('ShortenController (e2e)', () => {
   })
 
   it('/:shortCode (GET) should redirect and increment clickCount', async () => {
-    await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
+    await request(app.getHttpServer()).get(`/r/${createdShortCode}`).expect(302)
     const after = await prisma.link.findUnique({
       where: { shortCode: createdShortCode },
     })
@@ -74,8 +74,8 @@ describe('ShortenController (e2e)', () => {
   })
 
   it('/analytics/:shortCode (GET) should return analytics data', async () => {
-    await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
-    await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
+    await request(app.getHttpServer()).get(`/r/${createdShortCode}`).expect(302)
+    await request(app.getHttpServer()).get(`/r/${createdShortCode}`).expect(302)
 
     const res = await request(app.getHttpServer())
       .get(`/analytics/${createdShortCode}`)

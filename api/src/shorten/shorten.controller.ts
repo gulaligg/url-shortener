@@ -39,7 +39,7 @@ export class ShortenController {
         return this.service.delete(code)
     }
 
-    @Get(':shortCode')
+    @Get('r/:shortCode')
     async redirect(
         @Param('shortCode') code: string,
         @Req() req: Request,

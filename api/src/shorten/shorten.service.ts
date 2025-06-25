@@ -62,7 +62,7 @@ export class ShortenService {
             },
         })
 
-        return { shortUrl: `${process.env.APP_URL}/${link.shortCode}` }
+        return { shortUrl: `${process.env.APP_URL}/r/${link.shortCode}` }
     }
 
     async redirect(shortCode: string, ip: string) {
