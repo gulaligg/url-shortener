@@ -1,14 +1,18 @@
-import { Test, TestingModule } from '@nestjs/testing'
-import { INestApplication, ValidationPipe } from '@nestjs/common'
-import * as request from 'supertest'
-import { AppModule } from '../../src/app.module'
-import { PrismaService } from '../../src/prisma/prisma.service'
-import { config } from 'dotenv'
-config()
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import * as request from 'supertest';
+import { AppModule } from '../../src/app.module';
+import { PrismaService } from '../../src/prisma/prisma.service';
+import { config } from 'dotenv';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+
+config();
 
 describe('ShortenController (e2e)', () => {
   let app: INestApplication
   let prisma: PrismaService
+  let cache: Cache;
   let createdShortCode: string
 
   beforeAll(async () => {
@@ -19,19 +23,30 @@ describe('ShortenController (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile()
+    }).compile();
 
-    app = moduleFixture.createNestApplication()
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true }))
-    await app.init()
+    app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+    await app.init();
 
-    await prisma.click.deleteMany()
-    await prisma.link.deleteMany()
-  })
+    cache = app.get<Cache>(CACHE_MANAGER);
+    const store: any = (cache as any).store;
 
-  afterEach(async () => {
-    await app.close()
-  })
+    if (typeof store?.flushall === 'function') {
+      await store.flushall();
+    }
+    if (typeof (cache as any).reset === 'function') {
+      await (cache as any).reset();
+    }
+
+    await prisma.click.deleteMany();
+    await prisma.link.deleteMany();
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+    await app.close();
+  });
 
   it('full scenario: create → click → info → analytics → delete → 404', async () => {
     const payload = { originalUrl: 'https://gulaligulaliyev.com', alias: 'myalias123' }
