@@ -6,13 +6,13 @@ import {
     ValidationPipe,
     Get,
     Param,
-    Res,
     Req,
+    Res,
     Delete,
 } from '@nestjs/common'
 import { ShortenService } from './shorten.service'
 import { CreateLinkDto } from './dto/create-link.dto'
-import { Response, Request } from 'express'
+import { Request, Response } from 'express'
 
 @Controller()
 export class ShortenController {
@@ -34,11 +34,13 @@ export class ShortenController {
         return this.service.analytics(code)
     }
 
+    // Testiniz bu rotayı /links/:shortCode DELETE olarak çağırıyor
     @Delete('links/:shortCode')
     async remove(@Param('shortCode') code: string) {
         return this.service.delete(code)
     }
 
+    // En alta dinamik redirect route’u
     @Get(':shortCode')
     async redirect(
         @Param('shortCode') code: string,

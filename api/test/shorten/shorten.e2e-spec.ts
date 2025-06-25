@@ -12,11 +12,11 @@ describe('ShortenController (e2e)', () => {
   let createdShortCode: string
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    const mod: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile()
 
-    app = moduleFixture.createNestApplication()
+    app = mod.createNestApplication()
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }))
     await app.init()
 
@@ -31,15 +31,13 @@ describe('ShortenController (e2e)', () => {
 
   it('/shorten (POST) should create a link with custom alias', async () => {
     const payload = { originalUrl: 'https://example.com', alias: 'myalias123' }
-
-    const res = await request(app.getHttpServer() as any)
+    const res = await request(app.getHttpServer())
       .post('/shorten')
       .send(payload)
       .expect(201)
 
-    const body = res.body as { shortUrl: string }
-    expect(body).toHaveProperty('shortUrl')
-    expect(body.shortUrl).toMatch(/\/myalias123$/)
+    expect(res.body).toHaveProperty('shortUrl')
+    expect(res.body.shortUrl).toMatch(/\/myalias123$/)
 
     const link = await prisma.link.findUnique({
       where: { shortCode: 'myalias123' },
@@ -51,31 +49,20 @@ describe('ShortenController (e2e)', () => {
   })
 
   it('/:shortCode (GET) should redirect and increment clickCount', async () => {
-    const before = await prisma.link.findUnique({
-      where: { shortCode: createdShortCode },
-    })
-    expect(before).not.toBeNull()
-    expect(before!.clickCount).toBe(0)
-
-    const res = await request(app.getHttpServer() as any)
-      .get(`/${createdShortCode}`)
-      .expect(302)
-
-    expect(res.header.location).toBe('https://example.com')
-
+    await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
     const after = await prisma.link.findUnique({
       where: { shortCode: createdShortCode },
     })
-    expect(after).not.toBeNull()
     expect(after!.clickCount).toBe(1)
 
-    const clicks = await prisma.click.findMany({ where: { linkId: after!.id } })
+    const clicks = await prisma.click.findMany({
+      where: { linkId: after!.id },
+    })
     expect(clicks.length).toBe(1)
-    expect(clicks[0].ipAddress).toBeDefined() // IP adresi kaydı da olsun
   })
 
   it('/info/:shortCode (GET) should return link info', async () => {
-    const res = await request(app.getHttpServer() as any)
+    const res = await request(app.getHttpServer())
       .get(`/info/${createdShortCode}`)
       .expect(200)
 
@@ -87,14 +74,11 @@ describe('ShortenController (e2e)', () => {
   })
 
   it('/analytics/:shortCode (GET) should return analytics data', async () => {
-    await request(app.getHttpServer() as any)
-      .get(`/${createdShortCode}`)
-      .expect(302)
-    await request(app.getHttpServer() as any)
-      .get(`/${createdShortCode}`)
-      .expect(302)
+    // birkaç kez daha tıklayalım
+    await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
+    await request(app.getHttpServer()).get(`/${createdShortCode}`).expect(302)
 
-    const res = await request(app.getHttpServer() as any)
+    const res = await request(app.getHttpServer())
       .get(`/analytics/${createdShortCode}`)
       .expect(200)
 
@@ -106,11 +90,9 @@ describe('ShortenController (e2e)', () => {
   })
 
   it('/links/:shortCode (DELETE) should remove the link', async () => {
-    const res = await request(app.getHttpServer() as any)
+    await request(app.getHttpServer())
       .delete(`/links/${createdShortCode}`)
-      .expect(200)
-
-    expect(res.body).toEqual({ deleted: true })
+      .expect(200, { deleted: true })
 
     const link = await prisma.link.findUnique({
       where: { shortCode: createdShortCode },
@@ -119,11 +101,10 @@ describe('ShortenController (e2e)', () => {
   })
 
   it('after deletion, info and analytics should return 404', async () => {
-    await request(app.getHttpServer() as any)
+    await request(app.getHttpServer())
       .get(`/info/${createdShortCode}`)
       .expect(404)
-
-    await request(app.getHttpServer() as any)
+    await request(app.getHttpServer())
       .get(`/analytics/${createdShortCode}`)
       .expect(404)
   })

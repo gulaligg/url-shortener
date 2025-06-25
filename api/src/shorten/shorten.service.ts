@@ -37,12 +37,14 @@ export class ShortenService {
         const { originalUrl, expiresAt, alias } = dto
         const cacheKey = `alias:${originalUrl}`
 
-        // Eğer alias verilmiş ve zaten varsa hata fırlat
+        // Eğer kullanıcı özel alias vermişse ve zaten varsa hata fırlat
         if (alias) {
             const conflict = await this.prisma.link.findUnique({
                 where: { shortCode: alias },
             })
-            if (conflict) throw new BadRequestException('Alias already in use')
+            if (conflict) {
+                throw new BadRequestException('Alias already in use')
+            }
         }
 
         // Alias yoksa cache’den al veya yeni üret
@@ -53,6 +55,7 @@ export class ShortenService {
                 shortCode = cached
             } else {
                 shortCode = await this.generateAlias()
+                // **Üçüncü parametre artık direkt TTL (saniye)**
                 await this.cacheManager.set(cacheKey, shortCode, 300)
             }
         }
@@ -68,7 +71,7 @@ export class ShortenService {
         return { shortUrl: `${process.env.APP_URL}/${link.shortCode}` }
     }
 
-    /** Kısa koda tıklamada yönlendir ve sayacı artır */
+    /** Kısa koda tıklayınca redirect ve sayaç artışı */
     async redirect(shortCode: string, ip: string) {
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
@@ -90,9 +93,8 @@ export class ShortenService {
         return link.originalUrl
     }
 
-    /** Bilgi (info) isteğinde önce DB kontrolü, sonra cache set */
+    /** Info isteğinde önce DB’den bak, sonra cache’e set et */
     async getInfo(shortCode: string) {
-        // 1) DB’den al ve var mı kontrol et
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
             select: { originalUrl: true, createdAt: true, clickCount: true },
@@ -101,10 +103,8 @@ export class ShortenService {
             throw new NotFoundException('Link not found')
         }
 
-        // 2) Cache’e yaz (isteğe bağlı)
-        const cacheKey = `info:${shortCode}`
-        await this.cacheManager.set(cacheKey, link, 60)
-
+        // **Cache’e yazarken de direkt TTL**
+        await this.cacheManager.set(`info:${shortCode}`, link, 60)
         return link
     }
 
@@ -118,14 +118,10 @@ export class ShortenService {
             throw new NotFoundException('Link not found')
         }
 
-        await this.prisma.click.deleteMany({
-            where: { linkId: link.id },
-        })
-        await this.prisma.link.delete({
-            where: { shortCode },
-        })
+        await this.prisma.click.deleteMany({ where: { linkId: link.id } })
+        await this.prisma.link.delete({ where: { shortCode } })
 
-        // Cache anahtarlarını temizle
+        // Cache anahtarlarını mutlaka sil
         await Promise.all([
             this.cacheManager.del(`info:${shortCode}`),
             this.cacheManager.del(`analytics:${shortCode}`),
@@ -134,9 +130,8 @@ export class ShortenService {
         return { deleted: true }
     }
 
-    /** Analitik isteğinde önce DB kontrolü, sonra cache set */
+    /** Analytics isteğinde önce DB’den bak, sonra cache’e set et */
     async analytics(shortCode: string) {
-        // 1) DB’den link’i al ve varlık kontrolü
         const link = await this.prisma.link.findUnique({
             where: { shortCode },
             select: { clickCount: true },
@@ -145,7 +140,6 @@ export class ShortenService {
             throw new NotFoundException('Link not found')
         }
 
-        // 2) Son 5 ip kaydını al
         const lastClicks = await this.prisma.click.findMany({
             where: { link: { shortCode } },
             orderBy: { clickedAt: 'desc' },
@@ -158,9 +152,7 @@ export class ShortenService {
             lastIps: lastClicks.map((c) => c.ipAddress.replace(/^::ffff:/, '')),
         }
 
-        // 3) Cache’e yaz
         await this.cacheManager.set(`analytics:${shortCode}`, result, 60)
-
         return result
     }
 }
