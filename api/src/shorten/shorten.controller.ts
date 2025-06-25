@@ -14,7 +14,6 @@ import {
     ApiTags, ApiOperation, ApiResponse, ApiParam,
     ApiCreatedResponse, ApiOkResponse, ApiNotFoundResponse,
     ApiBadRequestResponse, ApiExtraModels, getSchemaPath,
-    ApiBearerAuth,
 } from '@nestjs/swagger';
 import { HttpErrorDto } from './dto/http-error.dto';
 import { ShortenService } from './shorten.service';

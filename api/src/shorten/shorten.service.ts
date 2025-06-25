@@ -119,8 +119,10 @@ export class ShortenService {
             this.cacheManager.del(`alias:${link.originalUrl}`),
         ]);
 
-        if (typeof (this.cacheManager as any).reset === 'function') {
-            await (this.cacheManager as any).reset();
+        const resettable = this.cacheManager as Cache & { reset?: () => Promise<void> };
+
+        if (typeof resettable.reset === 'function') {
+            await resettable.reset();
         }
 
         return { deleted: true };
