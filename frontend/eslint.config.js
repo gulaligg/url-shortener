@@ -20,7 +20,7 @@ export default defineFlatConfig([
         },
         plugins: { vue: vuePlugin },
         rules: {
-            ...vuePlugin.configs['vue3-essential'].rules,
+            ...vuePlugin.configs['flat/vue3-essential'].rules,
         },
     },
     {
