@@ -1,5 +1,4 @@
-// eslint.config.js  – ESM / Flat Config
-import { defineFlatConfig } from 'eslint-define-config'
+// eslint.config.js  – Flat config / ESM
 import js from '@eslint/js'
 import vuePlugin from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
@@ -7,21 +6,22 @@ import tsParser from '@typescript-eslint/parser'
 import tsPlugin from '@typescript-eslint/eslint-plugin'
 import globals from 'globals'
 
-export default defineFlatConfig([
+/** @type {import('eslint').FlatConfig[]} */
+export default [
+    /* Ortak ayarlar -------------------------------------------------------- */
     {
         ignores: ['dist/**', 'node_modules/**'],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'module',
-            globals: {
-                ...globals.browser,
-                ...globals.node,
-            },
+            globals: { ...globals.browser, ...globals.node },
         },
     },
 
+    /* JS önerilen kurallar ------------------------------------------------- */
     js.configs.recommended,
 
+    /* Vue dosyaları -------------------------------------------------------- */
     {
         files: ['**/*.vue'],
         languageOptions: {
@@ -35,6 +35,7 @@ export default defineFlatConfig([
         ...vuePlugin.configs['flat/vue3-essential'],
     },
 
+    /* TypeScript dosyaları ------------------------------------------------- */
     {
         files: ['**/*.ts'],
         languageOptions: {
@@ -53,4 +54,4 @@ export default defineFlatConfig([
             ],
         },
     },
-])
+]
