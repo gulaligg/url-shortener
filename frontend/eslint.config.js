@@ -1,25 +1,26 @@
+// eslint.config.js  – ESM / Flat Config
+import { defineFlatConfig } from 'eslint-define-config'
 import js from '@eslint/js'
 import vuePlugin from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
-import tsPlugin from '@typescript-eslint/eslint-plugin'
 import tsParser from '@typescript-eslint/parser'
-import { browser as browserGlobals } from 'globals'
+import tsPlugin from '@typescript-eslint/eslint-plugin'
+import globals from 'globals'
 
-/** @type {import('eslint').FlatConfig[]} */
-export default [
-
-    { ignores: ['dist/**', 'node_modules/**'] },
-
-    js.configs.recommended,
-
-    ...vuePlugin.configs['flat/vue3-essential'],
-
+export default defineFlatConfig([
     {
-        files: ['**/*.{js,ts,vue}'],
+        ignores: ['dist/**', 'node_modules/**'],
         languageOptions: {
-            globals: browserGlobals,
+            ecmaVersion: 'latest',
+            sourceType: 'module',
+            globals: {
+                ...globals.browser,
+                ...globals.node,
+            },
         },
     },
+
+    js.configs.recommended,
 
     {
         files: ['**/*.vue'],
@@ -28,11 +29,10 @@ export default [
             parserOptions: {
                 parser: tsParser,
                 extraFileExtensions: ['.vue'],
-                ecmaVersion: 'latest',
-                sourceType: 'module',
             },
         },
         plugins: { vue: vuePlugin },
+        ...vuePlugin.configs['flat/vue3-essential'],
     },
 
     {
@@ -42,13 +42,15 @@ export default [
             parserOptions: {
                 ecmaVersion: 'latest',
                 sourceType: 'module',
-                project: ['./tsconfig.json'],
             },
         },
         plugins: { '@typescript-eslint': tsPlugin },
         rules: {
             ...tsPlugin.configs.recommended.rules,
-            '@typescript-eslint/no-explicit-any': ['warn', { ignoreRestArgs: true }],
+            '@typescript-eslint/no-explicit-any': [
+                'warn',
+                { ignoreRestArgs: true },
+            ],
         },
     },
-]
+])
