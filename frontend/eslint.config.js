@@ -6,9 +6,22 @@ import tsPlugin from '@typescript-eslint/eslint-plugin'
 
 /** @type {import('eslint').FlatConfig[]} */
 export default [
+    {
+        ignores: ['dist/**', 'node_modules/**']
+    },
+
     js.configs.recommended,
 
     ...vuePlugin.configs['flat/essential'],
+
+    {
+        languageOptions: {
+            env: {
+                browser: true,
+                es2021: true,
+            }
+        }
+    },
 
     {
         files: ['**/*.vue'],
