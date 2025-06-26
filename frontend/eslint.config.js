@@ -1,26 +1,24 @@
 import js from '@eslint/js'
 import vuePlugin from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
-import tsParser from '@typescript-eslint/parser'
 import tsPlugin from '@typescript-eslint/eslint-plugin'
+import tsParser from '@typescript-eslint/parser'
+import { browser as browserGlobals } from 'globals'
 
 /** @type {import('eslint').FlatConfig[]} */
 export default [
-    {
-        ignores: ['dist/**', 'node_modules/**']
-    },
+
+    { ignores: ['dist/**', 'node_modules/**'] },
 
     js.configs.recommended,
 
-    ...vuePlugin.configs['flat/essential'],
+    ...vuePlugin.configs['flat/vue3-essential'],
 
     {
+        files: ['**/*.{js,ts,vue}'],
         languageOptions: {
-            env: {
-                browser: true,
-                es2021: true,
-            }
-        }
+            globals: browserGlobals,
+        },
     },
 
     {
