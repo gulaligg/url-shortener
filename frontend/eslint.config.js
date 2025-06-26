@@ -1,6 +1,6 @@
-// eslint.config.js  – Flat config / ESM
+// eslint.config.js
 import js from '@eslint/js'
-import vuePlugin from 'eslint-plugin-vue'
+import vue from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
 import tsParser from '@typescript-eslint/parser'
 import tsPlugin from '@typescript-eslint/eslint-plugin'
@@ -8,50 +8,39 @@ import globals from 'globals'
 
 /** @type {import('eslint').FlatConfig[]} */
 export default [
-    /* Ortak ayarlar -------------------------------------------------------- */
+    /* JS-genel kurallar */
+    js.configs.recommended,
+
+    /* Tarayıcı + Node global’leri */
     {
-        ignores: ['dist/**', 'node_modules/**'],
+        files: ['**/*.{js,ts,vue}'],
         languageOptions: {
-            ecmaVersion: 'latest',
-            sourceType: 'module',
             globals: { ...globals.browser, ...globals.node },
         },
     },
 
-    /* JS önerilen kurallar ------------------------------------------------- */
-    js.configs.recommended,
-
-    /* Vue dosyaları -------------------------------------------------------- */
+    /* Vue dosyaları */
     {
         files: ['**/*.vue'],
         languageOptions: {
             parser: vueParser,
-            parserOptions: {
-                parser: tsParser,
-                extraFileExtensions: ['.vue'],
-            },
+            parserOptions: { parser: tsParser, extraFileExtensions: ['.vue'] },
         },
-        plugins: { vue: vuePlugin },
-        ...vuePlugin.configs['flat/vue3-essential'],
+        plugins: { vue },
+        ...vue.configs['flat/vue3-essential'],
     },
 
-    /* TypeScript dosyaları ------------------------------------------------- */
+    /* TypeScript dosyaları */
     {
         files: ['**/*.ts'],
         languageOptions: {
             parser: tsParser,
-            parserOptions: {
-                ecmaVersion: 'latest',
-                sourceType: 'module',
-            },
+            parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
         },
         plugins: { '@typescript-eslint': tsPlugin },
         rules: {
             ...tsPlugin.configs.recommended.rules,
-            '@typescript-eslint/no-explicit-any': [
-                'warn',
-                { ignoreRestArgs: true },
-            ],
+            '@typescript-eslint/no-explicit-any': ['warn', { ignoreRestArgs: true }],
         },
     },
 ]
