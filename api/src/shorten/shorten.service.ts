@@ -3,13 +3,12 @@ import {
     BadRequestException,
     NotFoundException,
     Inject,
-} from '@nestjs/common'
-import { CACHE_MANAGER } from '@nestjs/cache-manager'
-import type { Cache } from 'cache-manager'
-import { randomBytes } from 'crypto'
-
-import { PrismaService } from '../prisma/prisma.service'
-import { CreateLinkDto } from './dto/create-link.dto'
+} from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
+import { randomBytes } from 'crypto';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateLinkDto } from './dto/create-link.dto';
 
 /* ---------- lint-safe helper types ------------------------- */
 interface Flushable {
@@ -35,7 +34,7 @@ export class ShortenService {
     constructor(
         private readonly prisma: PrismaService,
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
-    ) { }
+    ) { };
 
     /* ---------------------------- helpers -------------------------- */
     private async generateAlias(): Promise<string> {
@@ -50,7 +49,7 @@ export class ShortenService {
             select: { id: true },
         })
         return exists ? this.generateAlias() : code
-    }
+    };
 
     /* ----------------------------- CREATE -------------------------- */
     async create(dto: CreateLinkDto) {
@@ -81,7 +80,7 @@ export class ShortenService {
         })
 
         return { shortUrl: `${process.env.APP_URL}/${link.shortCode}` }
-    }
+    };
 
     /* ---------------------------- REDIRECT ------------------------- */
     async redirect(shortCode: string, ip: string) {
@@ -114,7 +113,7 @@ export class ShortenService {
 
         await this.cache.set(cacheKey, link, 60)
         return link
-    }
+    };
 
     /* ----------------------------- DELETE -------------------------- */
     async delete(shortCode: string) {
@@ -148,7 +147,7 @@ export class ShortenService {
         }
 
         return { deleted: true }
-    }
+    };
 
     /* --------------------------- ANALYTICS ------------------------- */
     async analytics(shortCode: string) {
@@ -176,5 +175,5 @@ export class ShortenService {
 
         await this.cache.set(cacheKey, result, 60)
         return result
-    }
-}
+    };
+};

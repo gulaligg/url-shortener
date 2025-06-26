@@ -1,14 +1,14 @@
 import js from '@eslint/js'
 import vuePlugin from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
-import tsPlugin from '@typescript-eslint/eslint-plugin'
 import tsParser from '@typescript-eslint/parser'
+import tsPlugin from '@typescript-eslint/eslint-plugin'
 
 /** @type {import('eslint').FlatConfig[]} */
 export default [
     js.configs.recommended,
 
-    ...vuePlugin.configs['flat/vue3-essential'],
+    ...vuePlugin.configs['flat/essential'],
 
     {
         files: ['**/*.vue'],
@@ -23,6 +23,7 @@ export default [
         },
         plugins: { vue: vuePlugin },
     },
+
     {
         files: ['**/*.ts'],
         languageOptions: {

@@ -1,28 +1,28 @@
 // src/store/index.ts
-import { defineStore } from 'pinia'
-import axios from 'axios'
-import type { AxiosResponse } from 'axios'
+import { defineStore } from 'pinia';
+import axios from 'axios';
+import type { AxiosResponse } from 'axios';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
-})
+});
 
 interface Link {
     originalUrl: string
     shortUrl: string
     shortCode: string
-}
+};
 
 interface Info {
     originalUrl: string
     createdAt: string
     clickCount: number
-}
+};
 
 interface Analytics {
     clickCount: number
     lastIps: string[]
-}
+};
 
 export const useLinkStore = defineStore('link', {
     state: () => ({
@@ -30,7 +30,6 @@ export const useLinkStore = defineStore('link', {
     }),
 
     actions: {
-        /** Yeni link oluştur */
         async createLink(payload: {
             originalUrl: string
             alias?: string
@@ -50,26 +49,22 @@ export const useLinkStore = defineStore('link', {
                 shortCode,
             }
 
-            // en başa ekle
             this.links.unshift(link)
             return link
         },
 
-        /** Link bilgisi getir (`<InfoView>`) */
         async fetchInfo(shortCode: string): Promise<Info> {
             const res: AxiosResponse<Info> = await api.get(`/info/${shortCode}`)
             return res.data
         },
 
-        /** Analitik veriyi getir (`clickCount` + son 5 IP) */
         async fetchAnalytics(shortCode: string): Promise<Analytics> {
             const res: AxiosResponse<Analytics> = await api.get(`/analytics/${shortCode}`)
             return res.data
         },
 
-        /** Link’i ve ilgili tıklamaları sil */
         async deleteLink(shortCode: string): Promise<void> {
-            await api.delete(`/links/${shortCode}`)
+            await api.delete(`/delete/${shortCode}`)
             this.links = this.links.filter(l => l.shortCode !== shortCode)
         },
     },

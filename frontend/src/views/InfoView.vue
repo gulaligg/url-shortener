@@ -38,27 +38,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { useToast } from 'vue-toastification'
-import { useLinkStore } from '../store/index'
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { useToast } from 'vue-toastification';
+import { useLinkStore } from '../store/index';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
-const toast = useToast()
-const route = useRoute()
-const shortCode = route.params.shortCode as string
-const linkStore = useLinkStore()
+const toast = useToast();
+const route = useRoute();
+const shortCode = route.params.shortCode as string;
+const linkStore = useLinkStore();
 
-const info = ref<{ originalUrl: string; createdAt: string } | null>(null)
+const info = ref<{ originalUrl: string; createdAt: string } | null>(null);
 const analytics = ref<{ clickCount: number; lastIps: string[] }>({
     clickCount: 0,
     lastIps: [],
-})
+});
 
 onMounted(async () => {
     info.value = await linkStore.fetchInfo(shortCode)
     analytics.value = await linkStore.fetchAnalytics(shortCode)
-})
+});
 
 async function handleClick() {
     window.open(`http://localhost:3000/${shortCode}`, '_blank')
@@ -66,5 +66,5 @@ async function handleClick() {
         analytics.value = await linkStore.fetchAnalytics(shortCode)
         toast.success('Click saved!')
     }, 200)
-}
+};
 </script>

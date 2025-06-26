@@ -67,23 +67,23 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
-import { useToast } from 'vue-toastification'
-import { useLinkStore } from '../store/index'
-import { TrashIcon } from '@heroicons/vue/24/outline'
+import { reactive, computed } from 'vue';
+import { useToast } from 'vue-toastification';
+import { useLinkStore } from '../store/index';
+import { TrashIcon } from '@heroicons/vue/24/outline';
 
-const toast = useToast()
-const linkStore = useLinkStore()
+const toast = useToast();
+const linkStore = useLinkStore();
 
 const form = reactive({
     originalUrl: '',
     alias: '',
     expiresAt: '',
-})
+});
 
 const linksMemo = computed(() =>
     [...linkStore.links].sort((a, b) => (a.shortCode < b.shortCode ? 1 : -1))
-)
+);
 
 async function onSubmit() {
     try {
@@ -95,7 +95,7 @@ async function onSubmit() {
     } catch (e: any) {
         toast.error(e.response?.data?.message || 'Could not be created')
     }
-}
+};
 
 async function handleGo(link: { originalUrl: string; shortUrl: string; shortCode: string }) {
     window.open(link.shortUrl, '_blank')
@@ -106,7 +106,7 @@ async function handleGo(link: { originalUrl: string; shortUrl: string; shortCode
             toast.info(`Your Link Clicked: ${stat.clickCount}`)
         } catch {}
     }, 200)
-}
+};
 
 async function onDelete(shortCode: string) {
     try {
@@ -115,5 +115,5 @@ async function onDelete(shortCode: string) {
     } catch (e: any) {
         toast.error(e.response?.data?.message || 'Deletion failed')
     }
-}
+};
 </script>
