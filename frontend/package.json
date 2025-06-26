@@ -20,6 +20,9 @@
     "vue-toastification": "^2.0.0-rc.5",
     "zod": "^3.25.67"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^3.29.4"
+  },
   "overrides": {
     "rollup": "^3.29.4"
   },
