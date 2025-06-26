@@ -1,15 +1,16 @@
-import { defineFlatConfig } from 'eslint-define-config';
-import js from '@eslint/js';
-import vue from 'eslint-plugin-vue';
-import tsParser from '@typescript-eslint/parser';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
+import { defineFlatConfig } from 'eslint-define-config'
+import js from '@eslint/js'
+import vuePlugin from 'eslint-plugin-vue'
+import vueParser from 'vue-eslint-parser'
+import tsParser from '@typescript-eslint/parser'
+import tsPlugin from '@typescript-eslint/eslint-plugin'
 
 export default defineFlatConfig([
     js.configs.recommended,
     {
         files: ['**/*.vue'],
         languageOptions: {
-            parser: vue.parsers['vue-eslint-parser'],
+            parser: vueParser,
             parserOptions: {
                 parser: tsParser,
                 extraFileExtensions: ['.vue'],
@@ -17,10 +18,9 @@ export default defineFlatConfig([
                 sourceType: 'module',
             },
         },
-        processor: vue.processors['.vue'],
-        plugins: { vue },
+        plugins: { vue: vuePlugin },
         rules: {
-            ...vue.configs['vue3-essential'].rules,
+            ...vuePlugin.configs['vue3-essential'].rules,
         },
     },
     {
